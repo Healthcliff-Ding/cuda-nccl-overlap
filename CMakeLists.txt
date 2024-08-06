@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 project(NcclOverlapTestMinimal LANGUAGES CXX CUDA)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # GoogleTest Preparation - Code block copied from
 # https://google.github.io/googletest/quickstart-cmake.html
-# include(FetchContent)
+include(FetchContent)
 # FetchContent_Declare(
 #   googletest
 #   GIT_REPOSITORY https://github.com/google/googletest.git
@@ -18,6 +19,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 #   GIT_REPOSITORY https://github.com/p-ranav/argparse.git
 # )
 # FetchContent_MakeAvailable(argparse)
+
+# FetchContent_Declare(
+#   fmt
+#   GIT_REPOSITORY https://github.com/fmtlib/fmt
+#   GIT_TAG e69e5f977d458f2650bb346dadf2ad30c5320281)
+# FetchContent_MakeAvailable(fmt)
 
 if(DEFINED ENV{CONDA_PREFIX})
   # use conda environment

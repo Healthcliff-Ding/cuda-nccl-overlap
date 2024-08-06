@@ -37,13 +37,16 @@ int main(int argc, char* argv[])
     // Prepare data
     // sgemm
     std::vector<float> vec(1024, 0.1);
+    cublasHandle_t handle;
     float* d_a, *d_b, *d_c;
     const int m = 20480, n = 4096, k = 1024;
+    CUBLAS_CHECK(cublasCreate(&handle));
     CUDA_CHECK(cudaMalloc(&d_a, m * k * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&d_b, n * k * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&d_c, m * n * sizeof(float)));
     CUDA_CHECK(cudaMemcpyAsync(d_a, vec.data(), k * sizeof(float), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpyAsync(d_b, vec.data(), k * sizeof(float), cudaMemcpyHostToDevice));
+
     float sgemm_res;
     // nccl
     cudaStream_t nccl_stream;
@@ -62,7 +65,8 @@ int main(int argc, char* argv[])
         std::cerr << "Invalid rank!" << std::endl;
         exit(1);
     }
-    CUDA_CHECK(cudaStreamSynchronize(nccl_stream));
+    // CUDA_CHECK(cudaStreamSynchronize(nccl_stream));
+    CUDA_CHECK(cudaDeviceSynchronize());
 
     // Send/Recv data
     if (rank == 0) {
@@ -75,15 +79,15 @@ int main(int argc, char* argv[])
         put_now();
         // overlapping compute
         for (int i = 0; i < 1000; ++i) {
-            sgemm(d_a, d_b, d_c, m, n, k);
+            sgemm(d_a, d_b, d_c, m, n, k, handle);
         }
         cudaStreamSynchronize(0);
         std::cout << "Finish computing... ";
         put_now();
-        cudaEvent_t event = f.get();
-        cudaEventSynchronize(event);
-        std::cout << "Finish sending... ";
-        put_now();
+        // cudaEvent_t event = f.get();
+        // cudaEventSynchronize(event);
+        // std::cout << "Finish sending... ";
+        // put_now();
     } else if (rank == 1) {
         // std::thread t {thread_main,
         //                SendOrRecv{rank},
@@ -97,10 +101,10 @@ int main(int argc, char* argv[])
         std::cout << "Start to receive... ";                
         put_now();
         // t.join();
-        cudaEvent_t event = f.get();
-        cudaEventSynchronize(event);
-        std::cout << "Finish receiving... ";  
-        put_now();
+        // cudaEvent_t event = f.get();
+        // cudaEventSynchronize(event);
+        // std::cout << "Finish receiving... ";  
+        // put_now();
     } else {
         std::cerr << "invalid rank: " << rank << std::endl;
     }

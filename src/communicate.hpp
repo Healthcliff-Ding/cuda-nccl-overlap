@@ -15,7 +15,7 @@ enum class SendOrRecv {
     Recv = 1
 };
 
-int constexpr nccl_op_times = 10;
+int constexpr nccl_op_times = 1000;
 std::array<int, nccl_op_times> static_int_arr;
 
 void CUDART_CB sleepCB(cudaStream_t stream, cudaError_t status,
@@ -49,12 +49,23 @@ cudaEvent_t thread_main(
         for (int i = 0; i < nccl_op_times; ++i) {
             NCCL_CHECK(ncclRecv(buf, count, ncclFloat32, peer, comm, stream));
             static_int_arr[i] = i;
-            cudaStreamAddCallback(stream, sleepCB, (void*)(static_int_arr.data()+i), 0);
+            // cudaStreamAddCallback(stream, sleepCB, (void*)(static_int_arr.data()+i), 0);
         }
     } else {
         std::cerr << "bad argument for send or recv" << std::endl;
     }
 
     cudaEventRecord(event, stream);
+    if (p2p_case == SendOrRecv::Send) {
+        cudaStreamSynchronize(stream);
+        std::cout << "Finish sending!" << std::endl;
+        // put_now();
+    } else if (p2p_case == SendOrRecv::Recv) {
+        cudaStreamSynchronize(stream);
+        std::cout << "Finish receiving!" << std::endl;
+        // put_now();
+    } else {
+        std::cerr << "bad argument for send or recv" << std::endl;
+    }
     return event;
 }
