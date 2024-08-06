@@ -15,7 +15,8 @@ enum class SendOrRecv {
     Recv = 1
 };
 
-std::array<int, 24> static_int_arr;
+int constexpr nccl_op_times = 10;
+std::array<int, nccl_op_times> static_int_arr;
 
 void CUDART_CB sleepCB(cudaStream_t stream, cudaError_t status,
                        void *userData) {
@@ -28,6 +29,7 @@ void CUDART_CB sleepCB(cudaStream_t stream, cudaError_t status,
                   << std::endl;
     }    
     // std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     std::cout << nth << "-th callback" << std::endl;
 }
 
@@ -40,11 +42,11 @@ cudaEvent_t thread_main(
     cudaEvent_t event;
     cudaEventCreate(&event);
     if (p2p_case == SendOrRecv::Send) {
-        for (int i = 0; i < 24; ++i) {
+        for (int i = 0; i < nccl_op_times; ++i) {
             NCCL_CHECK(ncclSend(buf, count, ncclFloat32, peer, comm, stream));
         }
     } else if (p2p_case == SendOrRecv::Recv) {
-        for (int i = 0; i < 24; ++i) {
+        for (int i = 0; i < nccl_op_times; ++i) {
             NCCL_CHECK(ncclRecv(buf, count, ncclFloat32, peer, comm, stream));
             static_int_arr[i] = i;
             cudaStreamAddCallback(stream, sleepCB, (void*)(static_int_arr.data()+i), 0);
