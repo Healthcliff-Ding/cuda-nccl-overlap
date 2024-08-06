@@ -1,4 +1,5 @@
 #include <chrono>
+#include <cstdint>
 #include <ctime>
 #include <iostream>
 #include <future>
@@ -13,6 +14,8 @@
 #include "compute.hpp"
 #include "communicate.hpp"
 #include "check_error.h"
+
+constexpr int sgemm_times = 50;
 
 int main(int argc, char* argv[])
 {
@@ -78,11 +81,11 @@ int main(int argc, char* argv[])
         std::cout << "Start to send && compute... ";
         put_now();
         // overlapping compute
-        for (int i = 0; i < 1000; ++i) {
+        for (int i = 0; i < sgemm_times; ++i) {
             sgemm(d_a, d_b, d_c, m, n, k, handle);
         }
         cudaStreamSynchronize(0);
-        std::cout << "Finish computing... ";
+        std::cout << "Finish computing! ";
         put_now();
         // cudaEvent_t event = f.get();
         // cudaEventSynchronize(event);
@@ -98,7 +101,14 @@ int main(int argc, char* argv[])
                     SendOrRecv{rank},
                     d_buf, n * k, 1 - rank,
                     comm, nccl_stream);
-        std::cout << "Start to receive... ";                
+        std::cout << "Start to receive && compute... ";                
+        put_now();
+        // overlapping compute
+        for (int i = 0; i < sgemm_times; ++i) {
+            sgemm(d_a, d_b, d_c, m, n, k, handle);
+        }
+        cudaStreamSynchronize(0);
+        std::cout << "Finish computing!";
         put_now();
         // t.join();
         // cudaEvent_t event = f.get();

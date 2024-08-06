@@ -1,7 +1,8 @@
 #pragma once
 
 #include <array>
-#include <chrono>
+#include <atomic>
+#include <cassert>
 #include <cstdio>
 #include <iostream>
 
@@ -16,7 +17,10 @@ enum class SendOrRecv {
 };
 
 int constexpr nccl_op_times = 1000;
+// A set of different variable for testing
+int static_nth = 0;
 std::array<int, nccl_op_times> static_int_arr;
+std::atomic_bool static_abool;
 
 void CUDART_CB sleepCB(cudaStream_t stream, cudaError_t status,
                        void *userData) {
@@ -29,8 +33,10 @@ void CUDART_CB sleepCB(cudaStream_t stream, cudaError_t status,
                   << std::endl;
     }    
     // std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    std::cout << nth << "-th callback" << std::endl;
+    // std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    // std::cout << nth << "-th callback" << std::endl;
+    // assert(nth == static_nth++);
+    static_abool.notify_one();
 }
 
 cudaEvent_t thread_main(
@@ -49,7 +55,7 @@ cudaEvent_t thread_main(
         for (int i = 0; i < nccl_op_times; ++i) {
             NCCL_CHECK(ncclRecv(buf, count, ncclFloat32, peer, comm, stream));
             static_int_arr[i] = i;
-            // cudaStreamAddCallback(stream, sleepCB, (void*)(static_int_arr.data()+i), 0);
+            cudaStreamAddCallback(stream, sleepCB, (void*)(static_int_arr.data()+i), 0);
         }
     } else {
         std::cerr << "bad argument for send or recv" << std::endl;
